@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI YouTube कंटेंट जेनरेटर</title>
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        :root {
+            --primary-color: #ff007a;
+            --secondary-color: #9b59b6;
+            --background-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #ffffff;
+            --text-color-secondary: #b3b3b3;
+            --border-radius: 12px;
+            --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+        
+        #app-content {
+            display: none; /* Hidden by default */
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--box-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-color-secondary);
+            font-size: 1.1rem;
+        }
+
+        .generator {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        #upload-area {
+            border: 2px dashed var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 250px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #upload-area:hover {
+            background-color: rgba(255, 0, 122, 0.1);
+            border-color: var(--secondary-color);
+        }
+
+        #upload-area p {
+            color: var(--text-color-secondary);
+        }
+
+        #image-preview {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #image-upload {
+            display: none;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 250px;
+            background-color: #2a2a2a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            font-size: 1rem;
+            color: var(--text-color);
+            resize: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        textarea::placeholder {
+            color: var(--text-color-secondary);
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 0, 122, 0.25);
+        }
+
+        #generate-btn {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
+            border: none;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s;
+        }
+
+        #generate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #generate-btn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 0, 122, 0.4);
+        }
+
+        .result-section {
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        #loading, #error {
+            text-align: center;
+            font-size: 1.1rem;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            display: none;
+        }
+
+        #loading {
+            color: var(--text-color);
+        }
+        
+        #error {
+            background-color: rgba(255, 0, 0, 0.2);
+            color: #ff8a8a;
+        }
+
+        #result, #text-result {
+            display: none;
+        }
+        
+        #thumbnail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .thumbnail-container {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .thumbnail-container img {
+            width: 100%;
+            display: block;
+            transition: transform 0.3s, filter 0.3s;
+        }
+        
+        .thumbnail-container:hover img {
+            transform: scale(1.05);
+            filter: brightness(0.6);
+        }
+
+        .download-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--primary-color);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .thumbnail-container:hover .download-btn {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .download-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .result-heading {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            margin-top: 2rem;
+            color: var(--primary-color);
+        }
+
+        .text-result-section {
+            margin-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 2rem;
+        }
+
+        .text-content-block {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .text-content-block h3 {
+            margin-bottom: 0.5rem;
+            color: var(--text-color-secondary);
+        }
+
+        .text-content-block pre {
+            background-color: #2a2a2a;
+            padding: 1rem;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: var(--text-color);
+            font-family: inherit;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.3rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: var(--primary-color);
+        }
+
+        /* Subscription Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--surface-color);
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-content h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .modal-content p {
+            font-size: 1.1rem;
+            color: var(--text-color-secondary);
+            margin-bottom: 2rem;
+        }
+        
+        #subscribe-btn {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--border-radius);
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s;
+            width: 100%;
+        }
+
+        #subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 0, 122, 0.4);
+        }
+
+
+        @media (max-width: 768px) {
+            .input-group {
+                grid-template-columns: 1fr;
+            }
+            body {
+                padding: 1rem;
+            }
+            #app-content, .container {
+                padding: 1.5rem;
+            }
+            header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0"
+  }
+}
+</script>
+</head>
+<body>
+    <div class="container">
+        <!-- Subscription Modal -->
+        <div id="subscription-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>30-दिन का प्रीमियम पास</h2>
+                <p>₹200 में 30-दिन का पास खरीदें। जब आपका पास खत्म हो जाएगा, तो आप यहीं से आसानी से दोबारा खरीद सकते हैं।</p>
+                <button id="subscribe-btn">₹200 में 30-दिन का पास खरीदें</button>
+            </div>
+        </div>
+
+        <!-- Main App Content (Initially Hidden) -->
+        <div id="app-content">
+            <header>
+                <h1>AI YouTube कंटेंट जेनरेटर</h1>
+                <p>फोटो और टाइटल से थंबनेल, डिस्क्रिप्शन और हैशटैग पाएं!</p>
+            </header>
+            <main class="generator">
+                <div class="input-group">
+                    <div id="upload-area" role="button" aria-label="इमेज अपलोड करें">
+                        <p>यहां इमेज अपलोड करें</p>
+                        <img id="image-preview" style="display: none;" alt="अपलोड की गई इमेज का प्रीव्यू">
+                    </div>
+                    <input type="file" id="image-upload" accept="image/*">
+                    <textarea id="title-text" placeholder="यहां अपने वीडियो का टाइटल या आईडिया लिखें..."></textarea>
+                </div>
+    
+                <button id="generate-btn" disabled>कंटेंट जेनरेट करें</button>
+                
+                <div class="result-section">
+                    <div id="loading"></div>
+                    <div id="error"></div>
+                    <div id="result">
+                        <h2 class="result-heading">आपके थंबनेल:</h2>
+                        <div id="thumbnail-grid"></div>
+                    </div>
+                    <div id="text-result" class="text-result-section">
+                        <h2 class="result-heading">सुझाए गए टाइटल, डिस्क्रिप्शन और हैशटैग:</h2>
+                        <div class="text-content-block">
+                            <h3>टाइटल</h3>
+                            <pre id="generated-title"></pre>
+                            <button class="copy-btn" data-target="generated-title">कॉपी करें</button>
+                        </div>
+                        <div class="text-content-block">
+                            <h3>डिस्क्रिप्शन</h3>
+                            <pre id="generated-description"></pre>
+                            <button class="copy-btn" data-target="generated-description">कॉपी करें</button>
+                        </div>
+                        <div class="text-content-block">
+                            <h3>हैशटैग</h3>
+                            <pre id="generated-hashtags"></pre>
+                            <button class="copy-btn" data-target="generated-hashtags">कॉपी करें</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script type="module" src="index.tsx"></script>
+</body>
+</html>
